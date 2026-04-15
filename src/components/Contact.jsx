@@ -1,18 +1,39 @@
 import { motion } from 'framer-motion'
-import { useState } from 'react'
+import { useState, useRef } from 'react'
+import emailjs from '@emailjs/browser'
+
+const EMAILJS_SERVICE_ID  = import.meta.env.VITE_EMAILJS_SERVICE_ID
+const EMAILJS_TEMPLATE_ID = import.meta.env.VITE_EMAILJS_TEMPLATE_ID
+const EMAILJS_PUBLIC_KEY  = import.meta.env.VITE_EMAILJS_PUBLIC_KEY
 
 export default function Contact() {
   const [sent, setSent] = useState(false)
+  const [sending, setSending] = useState(false)
+  const [error, setError] = useState(null)
   const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const formRef = useRef(null)
 
   const handleChange = (e) => {
     setForm((prev) => ({ ...prev, [e.target.name]: e.target.value }))
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    // In a real implementation, connect to a form service (Formspree, EmailJS, etc.)
-    setSent(true)
+    setSending(true)
+    setError(null)
+    try {
+      await emailjs.sendForm(
+        EMAILJS_SERVICE_ID,
+        EMAILJS_TEMPLATE_ID,
+        formRef.current,
+        { publicKey: EMAILJS_PUBLIC_KEY }
+      )
+      setSent(true)
+    } catch (err) {
+      setError('Something went wrong. Please try again or email me directly.')
+    } finally {
+      setSending(false)
+    }
   }
 
   return (
@@ -99,7 +120,7 @@ export default function Contact() {
                   <p className="text-sm text-[#7a849a]">I'll get back to you as soon as possible.</p>
                 </motion.div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
                   <div>
                     <label className="text-xs font-medium text-[#7a849a] mb-1.5 block">Name</label>
                     <input
@@ -136,9 +157,12 @@ export default function Contact() {
                       className="w-full bg-[#eef0f4] border border-transparent focus:border-[#1e2540]/20 focus:bg-white rounded-xl px-4 py-3 text-sm text-[#1a1d23] placeholder-[#aab4c4] outline-none transition-all duration-200 resize-none"
                     />
                   </div>
-                  <button type="submit" className="btn-primary w-full justify-center">
+                  {error && (
+                    <p className="text-sm text-red-500">{error}</p>
+                  )}
+                  <button type="submit" disabled={sending} className="btn-primary w-full justify-center disabled:opacity-60 disabled:cursor-not-allowed">
                     <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 7h10M8 3l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                    Send message
+                    {sending ? 'Sending…' : 'Send message'}
                   </button>
                 </form>
               )}
